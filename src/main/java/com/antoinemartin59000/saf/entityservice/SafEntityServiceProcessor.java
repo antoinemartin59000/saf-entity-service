@@ -1,6 +1,5 @@
 package com.antoinemartin59000.saf.entityservice;
 
-import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +45,8 @@ public class SafEntityServiceProcessor extends AbstractProcessor {
 
         try {
             generateHolder(classElements);
-        } catch (IOException e) {
+        } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
 
@@ -63,17 +63,16 @@ public class SafEntityServiceProcessor extends AbstractProcessor {
         return ENTITY_FQCN.equals(superElement.getQualifiedName().toString());
     }
 
-    private void generateHolder(List<TypeElement> classElements) throws IOException {
-        String className = SafEntityService.class.getSimpleName() + "Holder";
-        String searchName = className + "Search";
-        String packageName = processingEnv.getElementUtils().getPackageOf(classElements.get(0)).getQualifiedName().toString();
+    private void generateHolder(List<TypeElement> safEntityServiceElements) throws Exception {
+        String className = "SafEntityServiceProvider";
+        String packageName = processingEnv.getElementUtils().getPackageOf(safEntityServiceElements.get(0)).getQualifiedName().toString();
 
-        JavaFileObject searchFile = processingEnv.getFiler().createSourceFile(packageName + "." + searchName);
+        JavaFileObject searchFile = processingEnv.getFiler().createSourceFile(packageName + "." + className);
         try (Writer writer = searchFile.openWriter()) {
 
             writer.write("package " + packageName + ";\n\n");
-            String startClass = """
-                    import java.lang.reflect.InvocationTargetException;
+            String imports = """
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -88,6 +87,23 @@ import com.antoinemartin59000.saf.entity.SafEntity;
 import com.antoinemartin59000.saf.entity.SafEntitySearch;
 import com.antoinemartin59000.saf.entitydao.SafEntityDao;
 import com.antoinemartin59000.saf.entitydao.SafEntityDaoProvider;
+import com.antoinemartin59000.saf.entityservice.SafEntityService;
+
+                    """;
+
+            for (TypeElement safEntityServiceElement : safEntityServiceElements) {
+
+                DeclaredType extendedClass = (DeclaredType) safEntityServiceElement.getSuperclass();
+                String safEntityClassPath = extendedClass.getTypeArguments().get(0).toString();
+
+                imports += "import " + safEntityClassPath + ";\n";
+
+            }
+
+            writer.write(imports);
+
+            String classDefinition =
+                    """
 
 public class SafEntityServiceProvider {
 
@@ -159,12 +175,13 @@ public class SafEntityServiceProvider {
     }
                                         """;
 
-            writer.write(startClass);
+            writer.write(classDefinition);
 
-            for (TypeElement typeElement : classElements) {
-                writer.write("public " + typeElement.getSimpleName().toString() + " get" + typeElement.getSimpleName().toString() + "Service() {\n");
-                writer.write("    return get(" + typeElement.getSimpleName().toString() + ".class);\n");
-                writer.write("}\n");
+            for (TypeElement safEntityServiceElement : safEntityServiceElements) {
+
+                writer.write("    public " + safEntityServiceElement.getSimpleName().toString() + " get" + safEntityServiceElement.getSimpleName().toString() + "() {\n");
+                writer.write("        return get(" + replaceLast(safEntityServiceElement.getSimpleName().toString(), "Service", "") + ".class);\n");
+                writer.write("    }\n\n");
 
             }
             writer.write("\n");
@@ -174,4 +191,14 @@ public class SafEntityServiceProvider {
 
     }
 
+    public static String replaceLast(String string, String toReplace, String replacement) {
+        int pos = string.lastIndexOf(toReplace);
+        if (pos > -1) {
+            return string.substring(0, pos)
+                    + replacement
+                    + string.substring(pos + toReplace.length());
+        } else {
+            return string;
+        }
+    }
 }
