@@ -88,6 +88,7 @@ import com.antoinemartin59000.saf.entity.SafEntitySearch;
 import com.antoinemartin59000.saf.entitydao.SafEntityDao;
 import com.antoinemartin59000.saf.entitydao.SafEntityDaoProvider;
 import com.antoinemartin59000.saf.entityservice.SafEntityService;
+import com.antoinemartin59000.saf.entityservice.ISafEntityServiceProvider;
 
                     """;
 
@@ -105,7 +106,7 @@ import com.antoinemartin59000.saf.entityservice.SafEntityService;
             String classDefinition =
                     """
 
-public class SafEntityServiceProvider {
+public class SafEntityServiceProvider implements ISafEntityServiceProvider {
 
     private static final Map<Class<? extends SafEntity>, Class<? extends SafEntityService>> MAP = new HashMap<>();
 
